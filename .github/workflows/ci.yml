@@ -41,5 +41,6 @@ jobs:
             **/build/test-results/test/TEST-*.xml
             **/build/test-results/integrationTest/TEST-*.xml
             **/build/reports/tests/
+            build/reports/compose-smoke/
           if-no-files-found: ignore
           retention-days: 7

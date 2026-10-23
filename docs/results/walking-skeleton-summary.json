@@ -1,0 +1,119 @@
+{
+  "recordedDate": "2026-10-24",
+  "timezone": "Asia/Seoul",
+  "sourceState": "Pre-commit working tree based on 716ba27a4a3c09fbff632b62b49b0508a648b91b",
+  "tests": {
+    "test": {
+      "modules": {
+        "app-booking": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app-waiting": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app-worker": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "root": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "core": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tools/fake-ext": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "total": {
+        "tests": 60,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "integrationTest": {
+      "modules": {
+        "app-booking": {
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app-waiting": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app-worker": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "total": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "compose": {
+    "recordedAt": "2026-10-23T18:35:37.085414+00:00",
+    "revision": "716ba27a4a3c09fbff632b62b49b0508a648b91b",
+    "workingTreeChanged": true,
+    "status": "passed",
+    "checks": [
+      "startup, migration, and correlated HTTP journey",
+      "provider outage returns 503",
+      "provider recovery restores the journey",
+      "down/up preserves data in all three stores",
+      "reset clears owned data, reapplies migration, and preserves an unrelated volume"
+    ],
+    "journey": {
+      "requestId": "42d5422a-2a04-45fa-809a-eea8e54e4331",
+      "waiting": {
+        "requestId": "42d5422a-2a04-45fa-809a-eea8e54e4331",
+        "service": "waiting",
+        "mode": "stub"
+      },
+      "booking": {
+        "requestId": "42d5422a-2a04-45fa-809a-eea8e54e4331",
+        "service": "booking",
+        "mode": "stub",
+        "dependency": {
+          "requestId": "42d5422a-2a04-45fa-809a-eea8e54e4331",
+          "service": "fake-ext",
+          "mode": "stub"
+        }
+      }
+    },
+    "cleanup": "completed"
+  },
+  "images": {
+    "redis:7.4-alpine": "sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541",
+    "mysql:8.4": "sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69",
+    "nginxinc/nginx-unprivileged:1.28-alpine": "sha256:7377697a821c131a924a7105fafbe7414db4e9fcc77a6f08f776f33f141ec3f8",
+    "composeBuildBase:eclipse-temurin:21-jre": "sha256:227118764cccd3c3294617061aaa93a08309c63a395eefa83e6b35032992ea99"
+  }
+}

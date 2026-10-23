@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 # CI entry point. GitHub Actions calls this script, so local and hosted runs use the same checks.
 #
-# Usage: scripts/ci.sh [stage ...]      (no argument = the six default stages below)
+# Usage: scripts/ci.sh [stage ...]      (no argument = the seven default stages below)
 #   secret-scan  scanner self-test, tracked key files, gitleaks       scripts/secret-scan.sh
 #   hooks        pre-commit hook self-test in a throwaway repo         scripts/hook-selftest.sh
 #   build        compile everything and build the boot jars (no tests)
 #   unit         unit tests (*Test, no Docker)                         gradle test --rerun
 #   it           integration tests (*IT, Testcontainers)               gradle integrationTest --rerun
 #   image        non-root image build and container smoke checks      scripts/image-smoke.sh
+#   compose      isolated stack, request flow, recovery and reset      scripts/lab.sh smoke-ci
 # Optional explicit stage: name-scan, using FORBIDDEN_WORDS or a gitignored .forbidden-words file.
 # It fails without a nonempty list. The default stages need no private list or repository secrets.
 #
 # Test tasks run with --rerun so a green result always means the tests ran, never a build-cache hit.
-# Needs: JDK 21, Docker, git, openssl, Bash and standard Unix tools.
+# Needs: JDK 21, Docker with Compose, Python 3, git, openssl and Bash.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-DEFAULT_STAGES=(secret-scan hooks build unit it image)
+DEFAULT_STAGES=(secret-scan hooks build unit it image compose)
 ALL_STAGES=("${DEFAULT_STAGES[@]}" name-scan)
 GRADLE=(./gradlew --console=plain)
 if [[ -n "${CI:-}" ]]; then
@@ -57,6 +58,7 @@ run_stage() {
     unit)        "${GRADLE[@]}" test --rerun && echo "ci: unit — $(test_totals test)" ;;
     it)          "${GRADLE[@]}" integrationTest --rerun && echo "ci: it — $(test_totals integrationTest)" ;;
     image)       "${GRADLE[@]}" bootJar && scripts/image-smoke.sh ;;
+    compose)     scripts/lab.sh smoke-ci ;;
   esac
 }
 

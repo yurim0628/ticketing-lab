@@ -4,7 +4,7 @@
 
 Limited inventory, impatient clients, and unreliable dependencies make a useful systems laboratory. This project develops those problems as small, reproducible experiments: state an invariant, create a failure scenario, compare designs, and keep the evidence.
 
-**Current checkpoint: foundation.** Application startup, configuration validation, database constraints, and infrastructure checks are implemented. Queue admission, reservation workflows, payments, and load experiments are on the [roadmap](docs/roadmap.md).
+**Current step: 01 walking skeleton, verified locally.** The Compose runner and profile-scoped stub path connect the applications. All seven local verification stages passed; queue admission, reservation workflows, payments, and load experiments remain on the [numbered roadmap](docs/roadmap.md).
 
 [Start locally](docs/running.md) · [Understand the architecture](docs/architecture.md) · [Inspect the tests](docs/testing.md) · [Explore the experiments](docs/experiments/README.md)
 
@@ -21,10 +21,12 @@ Limited inventory, impatient clients, and unreliable dependencies make a useful 
 
 These are research questions, not claims that all six guarantees have already been implemented. [Experiment plans](docs/experiments/README.md) define the next pieces of evidence to collect.
 
-## What already works
+## Implemented scope
 
-The foundation has useful failure cases before any ticket is sold:
+The foundation and walking skeleton provide:
 
+- A Compose topology with five application processes, two Redis instances, MySQL, and nginx.
+- Profile-scoped UUID echoes across waiting and booking/provider, without creating business records.
 - Missing or invalid credentials stop startup; secret wrappers redact their values.
 - Waiting API and worker roles cannot be activated together.
 - Booking owns a Flyway migration with capacity and remaining-inventory constraints.
@@ -34,54 +36,52 @@ The foundation has useful failure cases before any ticket is sold:
 
 The [testing guide](docs/testing.md) links each claim to its implementation and explains its limits. The first [foundation verification record](docs/results/foundation.md) reports **41 ordinary tests and 21 integration tests**, all passing in a local run. There are no published business-workflow benchmarks yet.
 
-## Try the foundation
+## Run the walking skeleton
 
-Use **JDK 21**. The Gradle wrapper downloads its distribution and dependencies on the first run.
+Use **JDK 21, Docker with Compose v2, and Python 3**. From the repository root:
+
+```bash
+scripts/lab.sh up
+scripts/lab.sh status
+scripts/lab.sh smoke
+```
+
+The runner builds and starts nine containers, with nginx at `http://127.0.0.1:18080`. It generates local credentials in ignored `.lab/` files. The smoke checks readiness, a waiting echo followed by a booking-to-provider call with the same UUID, the initial migration, and an empty inventory table.
+
+```bash
+scripts/lab.sh down
+```
+
+`down` retains data volumes. `reset` deletes this project's data, immediately restarts the stack, and reruns the smoke. See [running the project](docs/running.md) for the command contract, configuration, and the standalone application option.
+
+The isolated check also exercises provider outage/recovery, data persistence, reset, and cleanup:
+
+```bash
+scripts/lab.sh smoke-ci
+```
+
+For ordinary tests or the full local/GitHub verification pipeline:
 
 ```bash
 ./gradlew test
-```
-
-Start the isolated host for future provider simulations; it currently exposes operational endpoints only:
-
-```bash
-./gradlew :fake-ext:bootRun --args='--server.address=127.0.0.1 --server.port=18080'
-```
-
-In another terminal:
-
-```bash
-curl http://127.0.0.1:18080/actuator/health
-```
-
-Stop it with `Ctrl+C`. This first run does not need a database, Redis, or credentials.
-
-For the infrastructure tests, start Docker and run:
-
-```bash
-./gradlew integrationTest
-```
-
-For the same verification stages used by GitHub Actions:
-
-```bash
 scripts/ci.sh
 ```
 
-The full pipeline also requires Git, OpenSSL, and Docker. Tests generate their own credentials. `./gradlew build` includes integration tests, so it also needs Docker. See [running the applications](docs/running.md) for per-app configuration and [verification stages](docs/testing.md) for narrower commands.
+The full pipeline also requires Git and OpenSSL. `./gradlew build` includes Docker-backed integration tests. The [testing guide](docs/testing.md) distinguishes the image check, Compose smoke, and planned business-flow experiments. The [walking-skeleton record](docs/results/walking-skeleton.md) reports 60 ordinary tests, 21 integration tests, and the isolated Compose checks.
 
 ## Repository map
 
 | Path | Current responsibility |
 |---|---|
-| [`app-waiting/`](app-waiting/) | Separate API/worker startup roles and queue Redis configuration |
-| [`app-booking/`](app-booking/) | Booking infrastructure configuration and schema migrations |
+| [`app-waiting/`](app-waiting/) | API/worker roles, queue Redis configuration, and the profile-scoped waiting stub |
+| [`app-booking/`](app-booking/) | Database infrastructure, migrations, and the booking-to-provider stub call |
 | [`app-worker/`](app-worker/) | Background-process host connected to booking infrastructure |
 | [`core/`](core/) | Validated configuration, secret handling, datasource setup, runtime defaults |
 | [`test-support/`](test-support/) | Disposable infrastructure, generated test credentials, shared assertions |
-| [`tools/fake-ext/`](tools/fake-ext/) | Isolated application host for planned dependency simulations |
+| [`tools/fake-ext/`](tools/fake-ext/) | Profile-scoped provider echo; payment simulation remains planned |
 | [`src/test/`](src/test/) | Repository-wide architecture checks and violation fixtures |
-| [`scripts/`](scripts/) | Verification pipeline, publication checks, optional Git hooks |
+| [`scripts/`](scripts/) | Local stack runner, verification pipeline, and optional Git hooks |
+| [`infra/`](infra/) | nginx routing and container health checks |
 | [`docs/`](docs/README.md) | Architecture, reproducible commands, experiment plans, and evidence |
 
 **Stack:** Java 21 · Spring Boot 3.5.16 · Gradle 8.14.3 (Groovy DSL) · MySQL 8.4 · Redis 7.4 · JUnit 5 · Testcontainers · ArchUnit.

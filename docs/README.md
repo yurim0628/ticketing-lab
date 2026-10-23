@@ -1,14 +1,16 @@
 # Documentation
 
-This is an experimental backend, with an implemented startup and verification foundation. Queueing, reservation, payment, and notification workflows are planned work. A design proposal is not evidence that its behavior has been implemented or measured.
+The foundation and step 01 walking skeleton have completed local verification. The walking skeleton connects profile-scoped stubs through Compose. Queueing, reservation, payment, and notification workflows remain planned.
 
 Read the documentation in this order:
 
-1. [Run the project](running.md) to start the smallest application or run the checks.
+1. [Run the project](running.md) to start the Compose stack, a standalone app, or the checks.
 2. [Understand the architecture](architecture.md) to see the current modules and dependency boundaries.
 3. [Inspect the tests](testing.md) to understand what the existing checks establish.
-4. [Follow the roadmap](roadmap.md) for milestone dependencies, concrete next changes, and completion criteria.
+4. [Follow the roadmap](roadmap.md) for the 00–21 branch sequence and completion criteria.
 5. [Explore the experiments](experiments/README.md) for hypotheses and the evidence needed to evaluate them.
+
+The [01 branch record](dev/branches/01-walking-skeleton.md) defines the topology, stub contract, and command interface. Its [verification record](results/walking-skeleton.md) contains the completed local checks.
 
 The detailed plans cover three connected scopes:
 
