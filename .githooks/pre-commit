@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# pre-commit hook. Install with scripts/install-hooks.sh (core.hooksPath=.githooks)
+# CI checks only run after a push, so this hook blocks problems before the commit.
+#   1) Forbidden extensions and paths (*.pem *.key *.jwt .env .secrets/ dev-keys/ ...)
+#   2) Private key headers
+#   3) Optional custom name patterns (paths and contents; pattern values are never printed)
+#   4) gitleaks git --staged (Docker)
+set -euo pipefail
+export LC_ALL=C
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+GITLEAKS_IMAGE="${GITLEAKS_IMAGE:-zricethezav/gitleaks:v8.30.1}"
+KEY_HEADER_RE='PRIVATE[[:space:]]KEY'
+FORBIDDEN_PATH_RE='(\.(pem|key|p12|jks|jwt)$)|(^|/)\.env$|(^|/)\.env\.[^/]*$|(^|/)\.secrets/|(^|/)dev-keys/|(^|/)\.forbidden-words$'
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/pre-commit.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
+git diff --cached --name-only -z --diff-filter=ACMR > "$tmp/staged"
+[[ -s "$tmp/staged" ]] || exit 0
+
+fail=0
+
+# 1) Forbidden extensions and paths
+while IFS= read -r -d '' file; do
+  if [[ "$file" =~ $FORBIDDEN_PATH_RE && "${file##*/}" != .env.example ]]; then
+    printf 'pre-commit: these files must not be committed: %q\n' "$file" >&2
+    fail=1
+  fi
+done < "$tmp/staged"
+
+# 2) Private key headers (checked against the staged content)
+while IFS= read -r -d '' f; do
+  # Read the index version first: grep -q on a pipe can cause SIGPIPE for a large git show output.
+  git show ":$f" > "$tmp/content"
+  if grep -I -E "$KEY_HEADER_RE" "$tmp/content" >/dev/null; then
+    echo "pre-commit: private key header found: $f" >&2
+    fail=1
+  fi
+done < "$tmp/staged"
+
+# 3) Optional custom name patterns
+words="$tmp/words"
+configured=0
+if [[ -n "${FORBIDDEN_WORDS:-}" ]]; then
+  printf '%s\n' "$FORBIDDEN_WORDS" | tr ',' '\n' > "$tmp/raw"
+  configured=1
+elif [[ -f .forbidden-words ]]; then
+  cp .forbidden-words "$tmp/raw"
+  configured=1
+else
+  : > "$tmp/raw"
+fi
+tr -d '\r' < "$tmp/raw" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v -E '^(#|$)' > "$words" || true
+if [[ "$configured" -eq 1 && ! -s "$words" ]]; then
+  echo "pre-commit: configured name list is empty; commit blocked" >&2
+  exit 1
+fi
+if [[ -s "$words" ]]; then
+  n=0
+  while IFS= read -r -d '' f; do
+    n=$((n + 1))
+    if printf '%s\n' "$f" | grep -q -i -F -f "$words"; then
+      echo "pre-commit: forbidden word in file path — staged file #$n" >&2
+      fail=1
+      continue
+    fi
+    git show ":$f" > "$tmp/content"
+    lines="$(grep -n -I -i -F -f "$words" "$tmp/content" | cut -d: -f1 | tr '\n' ' ' || true)"
+    if [[ -n "$lines" ]]; then
+      echo "pre-commit: forbidden word in contents — $f, lines $lines" >&2
+      fail=1
+    fi
+  done < "$tmp/staged"
+fi
+
+# 4) gitleaks (staged changes only)
+if docker info >/dev/null 2>&1; then
+  if docker run --rm -v "$ROOT:/repo:ro" "$GITLEAKS_IMAGE" git /repo --pre-commit --staged \
+      --config /repo/.gitleaks.toml --no-banner --redact --ignore-gitleaks-allow --log-level warn; then
+    :
+  else
+    rc=$?
+    if [[ "$rc" -eq 1 ]]; then
+      echo "pre-commit: gitleaks found a leak" >&2
+    else
+      echo "pre-commit: gitleaks could not complete (exit=$rc)" >&2
+    fi
+    fail=1
+  fi
+else
+  echo "pre-commit: warning — Docker unavailable; staged gitleaks skipped. CI requires the full scan." >&2
+fi
+
+if [[ $fail -ne 0 ]]; then
+  echo "pre-commit: commit blocked. Fix the issues above and commit again." >&2
+  exit 1
+fi

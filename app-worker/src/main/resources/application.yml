@@ -1,0 +1,22 @@
+# Shared defaults in core's lab/baseline-defaults.yml have the lowest precedence. App-specific overrides go here.
+spring:
+  application:
+    name: app-worker
+  data:
+    redis:
+      # This application uses booking Redis, independently of the waiting room queue.
+      host: ${BOOKING_REDIS_HOST:localhost}
+      port: ${BOOKING_REDIS_PORT:6379}
+  datasource:
+    hikari:
+      pool-name: worker
+      # Start with a smaller pool for the worker; connection and statement timeouts use the shared defaults.
+      maximum-pool-size: 5
+      minimum-idle: 5
+
+lab:
+  db:
+    # Username · password have no defaults → startup fails without them. No root account
+    url: ${WORKER_DB_URL:jdbc:mysql://localhost:3306/ticketing}
+    username: ${WORKER_DB_USERNAME}
+    password: ${WORKER_DB_PASSWORD}

@@ -1,0 +1,97 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
+plugins {
+    id 'java'
+    alias(libs.plugins.spring.boot) apply false
+}
+
+def bootBom = libs.spring.boot.bom
+def bootApps = ['app-waiting', 'app-booking', 'app-worker', 'fake-ext'] as Set
+
+// Startup tests must not inherit credentials from the developer's shell.
+def envExample = file('.env.example')
+def envExampleKeys = envExample.exists()
+        ? envExample.readLines('UTF-8')
+                .collect { it.trim() }
+                .findAll { it && !it.startsWith('#') }
+                .collect { it.split('=', 2)[0].trim() }
+        : []
+
+allprojects {
+    apply plugin: 'java'
+
+    group = 'lab.ticketing'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    dependencies {
+        implementation platform(bootBom)
+        annotationProcessor platform(bootBom)
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.compilerArgs.addAll(['-parameters', '-Xlint:deprecation,unchecked'])
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+        maxHeapSize = '512m'
+        envExampleKeys.each { environment.remove(it) }
+        systemProperty 'lab.repo-root', rootDir.absolutePath
+        testLogging {
+            events 'failed', 'skipped'
+            exceptionFormat = TestExceptionFormat.FULL
+        }
+    }
+
+    tasks.named('test', Test) {
+        exclude '**/*IT.class'
+    }
+    def testSourceSet = sourceSets.test
+    def integrationTest = tasks.register('integrationTest', Test) {
+        description = 'Runs integration tests (*IT) against disposable infrastructure.'
+        group = 'verification'
+        testClassesDirs = testSourceSet.output.classesDirs
+        classpath = testSourceSet.runtimeClasspath
+        include '**/*IT.class'
+        shouldRunAfter tasks.named('test')
+    }
+    tasks.named('check') {
+        dependsOn integrationTest
+    }
+}
+
+configure(subprojects.findAll { it.name in bootApps }) {
+    apply plugin: 'org.springframework.boot'
+
+    dependencies {
+        implementation project(':core')
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+        testImplementation project(':test-support')
+    }
+
+    tasks.named('bootJar', BootJar) {
+        archiveFileName = 'app.jar'
+    }
+}
+
+// Architecture checks inspect the main classes from every module.
+dependencies {
+    subprojects.each { testImplementation project(it.path) }
+    testImplementation libs.archunit.junit5
+}

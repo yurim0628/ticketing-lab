@@ -1,0 +1,47 @@
+# Shared experimental defaults, added at the lowest property-source precedence.
+# Application configuration, environment variables and command-line arguments can override them.
+# Loaded by lab.ticketing.core.config.BaselineDefaultsEnvironmentPostProcessor.
+# These starting values are exercised by integration tests; they are not a production capacity claim.
+spring:
+  threads:
+    virtual:
+      enabled: true
+  data:
+    redis:
+      timeout: 2s                   # Bound how long a Redis command can wait.
+      connect-timeout: 2s
+      lettuce:
+        shutdown-timeout: 200ms
+  datasource:
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 30              # Keep the baseline pool at a fixed size.
+      connection-timeout: 3000      # Milliseconds to wait for a pooled connection.
+      # MySQL max_execution_time limits SELECT statements; it does not limit writes.
+      connection-init-sql: SET SESSION max_execution_time = 2000
+  jdbc:
+    template:
+      query-timeout: 5s             # JDBC statement timeout, including writes through JdbcTemplate/JdbcClient.
+  transaction:
+    default-timeout: 5s             # Default for transactions managed by Spring.
+  jpa:
+    open-in-view: false             # Keep database access out of view rendering if JPA is added.
+server:
+  shutdown: graceful
+  tomcat:
+    max-connections: 4000           # Limit connections accepted by the connector.
+    accept-count: 200               # Listen backlog once the connection limit is reached.
+    keep-alive-timeout: 60s
+    max-keep-alive-requests: -1      # Allow connection reuse without a request-count limit.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

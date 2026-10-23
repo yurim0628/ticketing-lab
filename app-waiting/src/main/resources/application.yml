@@ -1,0 +1,16 @@
+# Shared defaults in core's lab/baseline-defaults.yml have the lowest precedence. App-specific overrides go here.
+spring:
+  application:
+    name: app-waiting
+  data:
+    redis:
+      # Queue Redis. Do not mix it with the booking Redis (BOOKING_REDIS_*).
+      host: ${QUEUE_REDIS_HOST:localhost}
+      port: ${QUEUE_REDIS_PORT:6379}
+
+lab:
+  waiting:
+    secrets:
+      # Checked only under the api profile. No default → startup fails if the environment variable is missing
+      wait-secret: ${WAIT_SECRET}
+      admin-key: ${QUEUE_ADMIN_KEY}

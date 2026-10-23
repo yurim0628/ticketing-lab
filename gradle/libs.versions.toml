@@ -1,0 +1,12 @@
+# Versions are declared here only. Libraries managed by the Spring Boot BOM (Testcontainers, Flyway,
+# MySQL Connector/J, Lettuce, Micrometer, etc.) use the BOM version as is.
+[versions]
+spring-boot = "3.5.16"
+archunit = "1.4.2"
+
+[libraries]
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

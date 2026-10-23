@@ -1,0 +1,99 @@
+{
+  "recorded_date": "2026-10-24",
+  "timezone": "Asia/Seoul",
+  "execution": "Local run of CI=true scripts/ci.sh",
+  "source_state": "Initial working tree before the first commit",
+  "environment": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "jdk": "21.0.9",
+    "gradle": "8.14.3",
+    "spring_boot": "3.5.16",
+    "docker_engine": "29.1.3"
+  },
+  "test_groups": {
+    "test": {
+      "totals": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "modules": [
+        {
+          "module": "app-booking",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "app-waiting",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "app-worker",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "root",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "core",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "tools/fake-ext",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "integrationTest": {
+      "totals": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "modules": [
+        {
+          "module": "app-booking",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "app-waiting",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "module": "app-worker",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    }
+  }
+}

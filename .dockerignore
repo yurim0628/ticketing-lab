@@ -1,0 +1,11 @@
+# Only the built jars go into the image build context.
+**
+!app-*/build/libs/app.jar
+!tools/fake-ext/build/libs/app.jar
+
+# These overlap with the rule above, but are excluded again at the end so they never get in, even if the rules change.
+.secrets/
+.env*
+docs/
+k6/
+.git/

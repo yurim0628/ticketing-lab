@@ -1,0 +1,45 @@
+# Runs the same checks as a local scripts/ci.sh invocation, without repository secrets.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04   # ships Docker (Testcontainers, gitleaks image), git and openssl
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # gitleaks scans the available Git history.
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Gradle and validate the wrapper
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4.4.2
+        with:
+          cache-read-only: ${{ github.event_name != 'push' || github.ref_name != github.event.repository.default_branch }}
+      - name: scripts/ci.sh
+        run: scripts/ci.sh
+      - name: Preserve test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.run_attempt }}
+          path: |
+            **/build/test-results/test/TEST-*.xml
+            **/build/test-results/integrationTest/TEST-*.xml
+            **/build/reports/tests/
+          if-no-files-found: ignore
+          retention-days: 7

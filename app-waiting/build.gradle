@@ -1,0 +1,4 @@
+// Separate API and worker profiles share a dedicated queue Redis connection.
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+}

@@ -1,0 +1,14 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api 'org.springframework.boot:spring-boot-starter-test'
+    api 'org.testcontainers:testcontainers'
+    api 'org.testcontainers:junit-jupiter'
+    api 'org.testcontainers:mysql'
+    // Applications supply the inspected infrastructure classes at test runtime.
+    compileOnly 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
+    compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+}

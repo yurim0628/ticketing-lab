@@ -1,0 +1,10 @@
+rootProject.name = 'ticketing-lab'
+
+include 'core'
+include 'test-support'
+include 'app-waiting'
+include 'app-booking'
+include 'app-worker'
+include 'fake-ext'
+
+project(':fake-ext').projectDir = file('tools/fake-ext')

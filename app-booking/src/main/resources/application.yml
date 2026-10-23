@@ -1,0 +1,24 @@
+# Shared defaults in core's lab/baseline-defaults.yml have the lowest precedence. App-specific overrides go here.
+spring:
+  application:
+    name: app-booking
+  data:
+    redis:
+      # This application uses booking Redis, independently of the waiting room queue.
+      host: ${BOOKING_REDIS_HOST:localhost}
+      port: ${BOOKING_REDIS_PORT:6379}
+  datasource:
+    hikari:
+      pool-name: booking
+  flyway:
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: false
+    clean-disabled: true
+
+lab:
+  db:
+    # No defaults for username · password → if either is missing, startup fails before connecting to the DB. The root account is not allowed
+    url: ${BOOKING_DB_URL:jdbc:mysql://localhost:3306/ticketing}
+    username: ${BOOKING_DB_USERNAME}
+    password: ${BOOKING_DB_PASSWORD}

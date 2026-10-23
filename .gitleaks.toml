@@ -1,0 +1,20 @@
+# gitleaks configuration: all default rules plus one rule specific to this repo.
+# No allowlist. On a false positive, fix the file; add an exception only when truly necessary, with a reason.
+# CI and the pre-commit hook use these same rules; the hook scans staged changes only.
+
+title = "ticketing-lab"
+
+[extend]
+useDefault = true
+
+# Catches a real value assigned to a secret key name in a config file (.env*, yml, properties, compose, etc.).
+# ${PLACEHOLDER} references (application.yml) and empty values (.env.example) do not match.
+# Java code is out of scope, because variable assignments in tests such as `WAIT_SECRET = TestSecrets.random(32)` would match.
+# Real secret strings in code are caught by the gitleaks default rules (entropy, key formats).
+[[rules]]
+id = "ticketing-lab-env-secret-value"
+description = "Secret value assigned to a ticketing-lab secret key in a config file"
+regex = '''(?i)\b[A-Z0-9_]*(SECRET|ADMIN_KEY|PASSWORD)[ \t]*[=:][ \t]*['"]?([^\s'"$#{}]{8,})'''
+path = '''(?i)(^|/)(\.env[^/]*|[^/]+\.(env|properties|ya?ml|conf|cnf|ini|toml|sh))$'''
+secretGroup = 2
+keywords = ["secret", "admin_key", "password"]
