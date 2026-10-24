@@ -1,1 +1,1 @@
-// Isolated host for future provider simulations. Currently exposes operational endpoints only.
+// Provider stub host; shared application dependencies are configured in the root build.

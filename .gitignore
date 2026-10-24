@@ -12,6 +12,8 @@
 **/dev-keys/
 # Optional, private input for the local name-scan command and pre-commit hook.
 .forbidden-words
+.lab/
+__pycache__/
 
 # ── Build and tooling ─────────────────────────────────────
 .gradle/

@@ -1,0 +1,3 @@
+lab:
+  walking-skeleton:
+    provider-url: ${LAB_WALKING_SKELETON_PROVIDER_URL}

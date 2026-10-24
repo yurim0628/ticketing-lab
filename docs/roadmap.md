@@ -1,117 +1,82 @@
 # Roadmap
 
-The lab progresses through executable experiments. Each milestone must connect a design decision to an implementation, a reproducible failure case, and evidence. A topic name or a passing startup test is not completion of a workflow.
+Development follows the numbered branch sequence below. Each step delivers a focused implementation, relevant checks, and evidence before the next integration step.
 
-**Current checkpoint: F0 only.** The [foundation record](results/foundation.md) contains 41 ordinary tests and 21 integration tests from a local run. They verify startup, configuration, infrastructure, and packaging. All workflow milestones below are planned; there are no queue or booking experiment results yet.
+**Current checkpoint: 00 and 01 implemented and verified locally.** The foundation also passed [GitHub Actions](https://github.com/yurim0628/ticketing-lab/actions/runs/39998162332); its [initial local record](results/foundation.md) remains separate. The current branch, `feature/01-walking-skeleton`, has a completed [local verification record](results/walking-skeleton.md). Queue, reservation, payment, and load experiments remain planned.
 
-## Milestones and dependencies
+## Branch sequence
 
-| ID | Milestone | Prerequisite | Demonstration required for completion |
+| Step | Branch | Scope | Status |
 |---|---|---|---|
-| F0 | Runtime foundation | None | Existing [local verification](results/foundation.md); rerun for the revision being evaluated |
-| L1 | Reproducible experiment environment | F0 | A clean checkout can start the required apps and stores, seed synthetic data, capture evidence, and reset only its own resources |
-| Q1 | Queue registration and lifecycle | L1 | Concurrent entry, lost responses, and opening/closing races preserve the declared identity and ordering contract |
-| Q2 | Admission progress and ownership | Q1 | Controlled time, competing workers, stale ownership, and restart cannot violate the selected admission budget |
-| Q3 | Status visibility and polling cost | Q2; instrumentation starts in L1 | Stale or failed publication is visible, display data cannot authorize entry, and polling cost is measured separately |
-| Q4 | Admission credentials and booking handoff | Q2; L1 booking host | Invalid credentials are rejected; concurrent consumption and a crash during handoff cannot create duplicate sessions |
-| B1 | Inventory holds and expiry | L1; Q4 for the HTTP entry path | Last-unit contention, retries, expiry, and transaction interruption preserve inventory and a legal reservation state |
-| P1 | Payment outcomes and reconciliation | B1; controllable fake provider | Success with a lost response, delayed events, and restart converge without duplicate charges, or remain visibly unresolved |
-| P2 | Cancellation and compensation | P1 | The chosen cancellation scope handles duplicate requests, late success, and lost refund responses without excess refund or double inventory release |
-| D1 | Durable event delivery | P1; exercise P2 events when available | Committed work survives relay crashes; redelivery and exhausted retries follow an explicit policy |
-| S1 | Combined load and recovery | Q3, Q4, B1, P1, P2, D1 | The complete synthetic flow retains its invariants during contention, dependency slowdown, interruption, and recovery |
+| 00 | `feature/project-foundation` (planned name: `feature/00-skeleton`) | Multi-module build, shared runtime defaults, initial migration, secret validation, CI | Implemented; verified locally and in GitHub Actions |
+| 01 | `feature/01-walking-skeleton` | Compose stack, correlated requests through profile-scoped stubs, smoke runner | Implemented; verified locally |
+| 02 | `feature/02-queue-enter` | Atomic queue registration with Lua and waiting identity/cookie | Planned |
+| 03 | `feature/03-booking-session` | Entry credential verification and booking access session | Planned |
+| 04 | `feature/04-worker-lock` | Worker ownership and monotonic admission progress | Planned |
+| 05 | `feature/05-queue-admit` | Admission decision and signed entry credential | Planned |
+| 06 | `feature/06-booking-hold` | Inventory hold with a conditional database update | Planned |
+| 07 | `feature/07-hold-expiry` | Hold expiry and competing state changes | Planned |
+| 08 | `feature/08-pg-adapter` | Controllable fake payment provider and adapter | Planned |
+| 09 | `feature/09-payment-unknown` | Orders, payment attempts, and unknown outcomes | Planned |
+| 10 | `feature/10-recon-netcancel` | Reconciliation and compensating cancellation | Planned |
+| 11 | `feature/11-outbox` | Durable event relay and notifications | Planned |
+| 12 | `test/12-invariants-fault-gate` | Invariant checks and controlled failure regressions | Planned |
+| 13 | `feature/13-queue-ops` | Queue administration and operational controls | Planned |
+| 14 | `test/14-queue-edge-load` | Edge request limits and k6 queue load experiments | Planned |
+| 15 | `feature/15-protection-resilience` | Load shedding and dependency circuit breaking | Planned |
+| 16 | `feature/16-booking-cancel` | Cancellation, refunds, and an auditable ledger | Planned |
+| 17 | `feature/17-booking-otp` | Phone verification and per-participant limits | Planned |
+| 18 | `feature/18-settlement` | Daily transaction and ledger reconciliation | Planned |
+| 19 | `feature/19-booking-admin` | Booking administration and recovery controls | Planned |
+| 20 | `test/20-secrets-audit` | Credential and key handling audit | Planned |
+| 21 | `test/21-load-fault-report` | Combined k6 load, failure, and recovery report | Planned |
 
-Every row after F0 is **planned**. An independent datastore experiment can begin before its HTTP integration prerequisite, but its milestone stays incomplete until the claimed boundary is tested. Q3 and Q4 can proceed in parallel after Q2. Recovery and measurement start within each milestone; S1 combines evidence rather than introducing those concerns for the first time.
+Branch numbers determine the integration order. A completed earlier step provides only its stated boundary: a stub response in 01 is not queue registration, and the provider echo is not the payment simulator delivered in 08.
 
-## L1 · Make experiments reproducible
+## Branch workflow
 
-Build a local execution path for the existing application modules, MySQL, the two Redis roles, and the future fake provider. Choose and document the orchestration mechanism; a complete stack is not available today.
+- Work on the numbered feature or test branch; do not commit implementation directly to `main`.
+- Prepare the change and its validation evidence before requesting a merge.
+- Merge into `main` in numeric order only after explicit user approval. Do not enable automatic merging.
+- Preserve the step boundary with a non-fast-forward merge and a `step-NN` tag when that integration is approved.
+- Keep each branch's goals and decisions under `docs/dev/branches/`; link its actual results from the branch record. Planned checks and executed evidence have separate statuses.
 
-Deliver the setup/reset/collection commands with their implementation. Generate local credentials and synthetic fixtures. Give each run isolated resource names and preserve failure artifacts before cleanup. Setup must provision the required databases and dependencies from a clean checkout.
+## 01 · Walking skeleton
 
-Add test controls when their first experiment needs them: an injectable clock, barriers around meaningful operation boundaries, recorded request histories, and a way to delay or discard responses. Add baseline metrics for request outcomes, dependency time, queue age, and pending work. `fake-ext` needs actual simulation endpoints before payment failures can be exercised.
+The [01 branch record](dev/branches/01-walking-skeleton.md) defines the implemented topology: four application artifacts running as five processes, two Redis instances, MySQL, and nginx through `docker-compose.yml`.
 
-**Completion:** another developer can execute the documented commands from a clean checkout and inspect the resulting artifacts. An application health response alone is insufficient.
+The client first requests a waiting echo, then uses the same UUID for a booking request. Booking calls the fake provider and returns its response as a nested dependency result. These routes exist only under the `walking-skeleton` profile. The isolated `smoke-ci` also checks a provider outage and recovery; it does not implement queue position, admission, inventory, payment, or notification behavior.
 
-## Q1–Q4 · Treat the queue as a system of its own
+The runner interface is `scripts/lab.sh up`, `status`, `smoke`, `down`, `reset`, and `smoke-ci`. Isolated setup, routing, dependency failure/recovery, storage persistence/reset, and cleanup passed locally. See the [verification record](results/walking-skeleton.md) for evidence and the branch record for the command contract.
 
-The [queue experiment plan](experiments/queue.md) defines registration, lifecycle, time, ownership, status, security, handoff, and failure cases in detail. Implement one behavior with its regression before expanding the workload.
+## Verification topics and numbered steps
 
-| Work area | Primary modules | Decision and evidence |
+The detailed experiment documents retain their topic IDs. They describe correctness and recovery coverage within the numbered sequence; they do not introduce another branch order.
+
+| Topic ID | Numbered steps | Verification scope |
 |---|---|---|
-| Registration | `app-waiting`, `test-support` | Define participant identity and ordering; compare a failing non-atomic baseline with the selected protocol |
-| Progress | `app-waiting`, `test-support` | Define a time/budget model; test two workers and resumption after ownership expires |
-| Visibility | `app-waiting`, local experiment tooling | Compare direct polling with a candidate snapshot/cache design; observe freshness and authoritative decisions independently |
-| Handoff | `app-waiting`, `app-booking` | Define credential scope, replay behavior, and retry recovery; test through separate instances and across a process interruption |
+| F0 | 00 | Runtime foundation; [recorded local evidence](results/foundation.md) |
+| L1 | 01; extend tooling with later steps | Reproducible topology, isolated data, commands, and evidence collection |
+| Q1 | 02, 12, 13 | Registration identity, ordering, lifecycle, and controlled races |
+| Q2 | 04, 12, 13 | Admission budget, competing workers, and stale ownership |
+| Q3 | 04, 13, 14 | Status visibility, freshness, polling cost, and operational controls |
+| Q4 | 03, 05, 12, 20 | Credentials, replay, booking handoff, and security checks |
+| B1 | 06, 07, 12 | Inventory conservation, idempotency, expiry, and transaction interruption |
+| P1 | 08, 09, 10, 12 | Payment uncertainty, independently recorded provider effects, and recovery |
+| P2 | 10, 16, 18 | Compensation, refunds, and reconciliation |
+| D1 | 11, 12; extend for 16 events | Durable notification intent, relay recovery, and duplicate effects |
+| S1 | 14, 15, 21 | Queue load, protection behavior, and integrated load/failure evidence |
 
-Queue evidence must distinguish eligibility progress, credential issuance, and actual booking arrival rate. It must also distinguish an established client's retry from a first response lost before the client learns its identity.
+Retain the controlled cases in the [queue plan](experiments/queue.md), [booking plan](experiments/booking.md), and [integrated flow plan](experiments/system-flow.md). Completing a step does not complete every topic that mentions it. For example, 01 establishes the executable path; later branches add clocks, barriers, state inspection, and provider fault controls when their behavior needs them.
 
-Q1 is the first business-behavior milestone. Begin with a small deterministic contention test, not a headline throughput target. Measure each path when it becomes executable, including failed runs and generator limitations.
+## Evidence required to complete a step
 
-## B1 · Inventory, idempotency, and time
+1. Define the boundary being changed: identities, inputs, outcomes, state, time, and data authority where relevant.
+2. Keep meaningful regressions with the implementation. Use deterministic concurrency or failure controls when a happy-path test cannot establish the claim.
+3. Record the exact revision, commands, environment, observed outcomes, and untested limits. Use the [report template](experiments/TEMPLATE.md) for experiments.
+4. Check effects and authoritative state as well as HTTP responses. Unknown outcomes remain visible until reconciled.
+5. Mark implementation, execution, and approval separately. A planned runner, skipped check, or unavailable environment is not a passing result.
 
-The [booking experiment plan](experiments/booking.md) gives the controlled cases, invariants, and evidence for B1, P1, P2, and D1. The [integrated plan](experiments/system-flow.md) connects them to queue admission.
+The [testing guide](testing.md#planned-validation-strategy) describes how short regressions and longer process experiments fit together. The existing foundation checks continue to run as new behavior is introduced.
 
-Define the reservation states and allowed transitions, the source of time, the retry identity and retention window, and the authoritative inventory model before building the endpoint. State whether one request can hold several units. A database constraint on remaining inventory is only one part of this protocol.
-
-Exercise competing requests for the last unit through independent connections and application instances. Reuse the same request identity, then reuse it with a different payload. Race expiry with confirmation and cancellation at the exact time boundary. Interrupt the transaction between inventory and reservation writes; verify rollback and recovery from a lost commit acknowledgement.
-
-Compare a conditional update with a locking alternative under identical assumptions. Keep state-transition tests and real-database regressions with the implementation. Check stored reservations, remaining capacity, and the allowed state history together, during the run where observable and after it settles.
-
-**Completion:** a defined inventory conservation rule, legal transition histories, rejected unauthorized mutations, reproducible races, and an initial contention report. No overselling claim is supported by a single sequential SQL constraint test.
-
-## P1 · Payment uncertainty and recovery
-
-Implement a synthetic provider with independently inspectable operations and controls for delay, duplicate or reordered events, rejection, and success followed by response loss. It must preserve its own record across the caller's restart so it can expose a duplicate operation.
-
-Define stable payment identity, provider/local authority, unresolved states, and recovery ownership. Test caller termination after provider success but before local persistence, an unavailable inquiry endpoint, stale attempts completing late, and expiry racing with payment success. Unknown outcomes must not silently become failed payments or new payment attempts.
-
-Durable recovery work belongs in this milestone. Restart must recover pending investigation without relying on in-memory timers. Record unresolved age, retry count, and the stopping condition for automatic recovery; include the simulated operator path when a case cannot converge automatically.
-
-**Completion:** provider and local histories agree for resolvable outcomes; unresolved cases remain visible; the approved recovery policy prevents a second charge. Each failure boundary has a regression or an explicit untested limit.
-
-## P2 · Cancellation and compensation
-
-Start with full cancellation through the fake provider. Define the cancellation deadline, refund outcome, and inventory-release point as explicit experiment inputs.
-
-Exercise concurrent cancellations, refund success with a lost response, restart during recovery, and payment success after the reservation can no longer be confirmed. Verify that recorded refunds do not exceed the captured amount, capacity is returned at most once, and late events cannot overwrite a newer valid outcome.
-
-**Completion:** a state and amount reconciliation report across local records and the fake provider, including explicitly unresolved compensation. Partial refunds and disputes remain extensions unless a later experiment defines them.
-
-## D1 · Delivery after commit
-
-Implement durable notification intent with the booking state change, then test relay termination before sending and after sending but before recording completion. Add competing relays, stale ownership, delayed delivery, and poison messages that exhaust the retry policy.
-
-Show the difference between preventing duplicate local work and preventing a receiver's duplicate effect. Use a fake receiver to record both delivery attempts and applied effects. A transactional outbox does not by itself establish exactly-once external delivery.
-
-**Completion:** no silently lost committed work within the tested failure model, inspectable duplicate handling, backlog age, bounded retries, and an executable replay/recovery procedure.
-
-## S1 · Integrate and challenge the design
-
-Follow the [queue-to-booking scenarios](experiments/system-flow.md) for boundary contracts, independent process topology, correlated evidence, and execution order.
-
-Run queue → handoff → hold → payment → notification, plus cancellation, as separate processes with real stores and synthetic external dependencies. Include a complete low-load scenario before increasing demand.
-
-Run sustained load, bursts, skewed contention on a small inventory, retry amplification, dependency slowdown, and recovery after demand falls. Bound the resources and observe accepted, rejected, timed-out, and never-generated work separately. Check correctness alongside latency and throughput; report short failure windows rather than hiding them in a whole-run average.
-
-Separate graceful restart, abrupt termination, datastore restore, and replica failover. Each requires its own executable setup and evidence. Replication and restore experiments are extensions until their topology and persistence assumptions exist; restart results cannot stand in for them.
-
-**Completion:** repeatable commands, raw per-run evidence, invariant checks, bottleneck analysis, and a recovery account tied to the tested revision and environment. Shared CI timing is not a capacity benchmark. No fixed throughput or latency target is adopted before a workload and environment are specified.
-
-## The completion rule for every milestone
-
-1. **Contract:** define identities, input/output errors, state transitions, time, data authority, and the boundary of the guarantee.
-2. **Design:** explain one consequential choice and an alternative; update architecture boundaries when code makes them real.
-3. **Counterexample:** reproduce a failure with controlled concurrency, time, or interruption. Check effects as well as responses.
-4. **Recovery:** specify what happens after a retry or restart, what can remain unresolved, and how to observe it.
-5. **Evidence:** link source, regression checks, actual reproduction commands, raw artifacts, and a report using the [template](experiments/TEMPLATE.md).
-6. **Status:** mark implemented and measured work separately. An unrun test plan, an inconclusive run, or an unavailable environment stays visible.
-
-Keep short deterministic regressions in the proposed CI test strategy described in [testing](testing.md#planned-validation-strategy). Longer process-failure and performance experiments need explicit execution and archived evidence; their runners are not implemented yet.
-
-## Next concrete changes
-
-1. **L1 environment:** add the reproducible topology, isolated reset, and artifact collection with an executed setup report.
-2. **Q1 contract and failing example:** define synthetic identity and ordering, introduce a history checker, and demonstrate a registration race in an isolated fixture.
-3. **Q1 implementation:** add the selected atomic registration protocol, duplicate/lifecycle regressions, and the first reproducible registration report.
-
-The initial scope covers queue admission, reservations, payment recovery, and delivery using simulated external dependencies. Extend it when a new research question calls for additional behavior and evidence.
+k6 is the planned HTTP load tool for the queue workload in 14 and the combined workload in 21. Earlier steps use focused correctness tests and smoke checks; they do not add an intervening load branch. Each load report must define its workload and resource limits, distinguish offered from achieved traffic, check correctness, and retain unsuccessful runs. Shared CI timing is not a capacity benchmark.

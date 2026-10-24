@@ -1,16 +1,16 @@
 # Testing and evidence
 
-The existing suite validates the application's foundation. It does not yet exercise a user booking flow or establish throughput, queue fairness, payment correctness, or availability guarantees.
+The suite covers the foundation and profile-scoped walking-skeleton contracts. A Compose smoke runner adds process wiring, dependency availability, and storage lifecycle checks. It does not exercise a user booking flow or establish throughput, queue fairness, payment correctness, or availability guarantees.
 
 The initial [foundation verification record](results/foundation.md) includes the environment, observed outcomes, and test totals from a real local run. It is a historical record; run the checks for the source revision you are evaluating.
 
-The recorded 41 unit tests and 21 integration tests are foundation checks. There are currently zero automated functional-flow tests for queue admission, reservation, payment, or recovery. Those totals do not represent implemented business guarantees or coverage of the planned failure scenarios below.
+The recorded 41 ordinary tests and 21 integration tests belong to the historical foundation run. The [walking-skeleton record](results/walking-skeleton.md) reports 60 ordinary and 21 integration tests, all passing with no errors or skips, plus all seven local verification stages. Business-flow and recovery scenarios below remain planned; the stub journey is not their implementation.
 
 ## Test boundaries
 
 | Command | What runs | External requirements |
 |---|---|---|
-| `./gradlew test` | Tests excluding classes named `*IT`: configuration, startup validation, shared defaults, fake-ext startup, architecture checks | JDK 21; dependency downloads on first use |
+| `./gradlew test` | Tests excluding classes named `*IT`: configuration, startup validation, shared defaults, architecture, and stub contracts | JDK 21; dependency downloads on first use |
 | `./gradlew integrationTest` | `*IT` classes: application contexts against Redis/MySQL, Flyway constraints, statement timeout behavior, health and metrics | Docker; Testcontainers downloads images as needed |
 | `./gradlew check` | Both test groups | Docker |
 | `./gradlew build` | Assembly and `check` | Docker |
@@ -46,6 +46,7 @@ Gradle writes HTML reports under each participating project's `build/reports/tes
 | `unit` | `test --rerun` |
 | `it` | `integrationTest --rerun` |
 | `image` | Builds application JARs and runs the image smoke script |
+| `compose` | Runs `scripts/lab.sh smoke-ci` against an isolated stack |
 
 Run a subset by naming stages, for example `scripts/ci.sh build unit`. The default pipeline requires no private policy list. The optional `scripts/ci.sh name-scan` stage requires a caller-supplied nonempty `FORBIDDEN_WORDS` value or ignored `.forbidden-words` file. It is not a prerequisite for a public checkout's default checks.
 
@@ -56,6 +57,23 @@ Install local Git hooks with `scripts/install-hooks.sh`. Installation is explici
 [`image-smoke.sh`](../scripts/image-smoke.sh) builds the four application images and checks their configured runtime user, JAR permissions, and JVM options. It starts `fake-ext` with a read-only root filesystem and memory limit, checks health, process identity, and reported heap sizing, then checks that waiting's API role fails without its required secrets.
 
 This verifies packaging and selected startup behavior. It does not start a complete multi-service environment or exercise successful waiting, booking, and worker workflows together. Startup timing printed by the script is diagnostic output, not a repeatable performance benchmark.
+
+## Compose smoke scope
+
+`smoke` checks an already running local stack; `smoke-ci` creates its own stack. Both require Python 3 and Docker Compose in addition to the build prerequisites. They are separate from the image packaging check above.
+
+| Check | `scripts/lab.sh smoke` | `scripts/lab.sh smoke-ci` |
+|---|---|---|
+| Nine healthy services, correlated waiting/booking/provider responses | Yes | Yes |
+| Initial migration applied once; inventory table remains empty | Yes | Yes |
+| Provider stopped: booking returns `503`; restored provider succeeds | No | Yes |
+| Shutdown/restart preserves both Redis stores and MySQL data | No | Yes |
+| Reset clears owned data, reapplies migration, and preserves an unrelated control volume | No | Yes |
+| Separate project/allocated port, diagnostic capture, and cleanup | Uses the existing stack | Yes |
+
+The CI smoke writes `build/reports/compose-smoke/summary.json` and `compose.log`, including failure diagnostics. Its source revision and working-tree status identify the tested state. The [01 verification record](results/walking-skeleton.md) contains the observed local outcomes and cleanup result.
+
+The stub controller tests cover profile exclusion, UUID validation, correlation, and bounded provider failures. The Compose check exercises the real nginx/application/store topology. Neither establishes queue registration, payment recovery, throughput, or datastore failover. Reset is a destructive clean-state check, not a backup restoration test.
 
 ## Planned validation strategy
 
@@ -110,7 +128,7 @@ Preserve the commit, configuration, seed, exact commands, per-run outcomes, and 
 
 | Execution context | Current state or proposed scope |
 |---|---|
-| Current default CI | The six stages documented above, covering the foundation, scanners, hooks, and image startup; no functional-flow or load checks |
+| Current default CI | Seven stages: scanners, hooks, build, ordinary tests, integration tests, images, and Compose stub/lifecycle smoke; no business-flow or load checks |
 | Proposed PR checks | Short state/contract regressions and bounded real-store concurrency checks, added with each implementation |
 | Proposed explicit or scheduled runs | Multi-process fault injection and integrated recovery scenarios, with isolated state, bounded duration, and retained diagnostics |
 | Proposed controlled load runs | Repeated baseline/comparison runs and sustained-load evidence on a recorded environment; not absolute latency gates on a shared CI runner |
